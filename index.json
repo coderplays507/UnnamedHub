@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "hubName": "UnnamedScripts Hub",
+  "discord": "https://discord.gg/KVPfgF5Wqe",
+  "ui": "lib/ui-template.lua",
+  "games": [
+    {
+      "alias": "deaglearena",
+      "name": "Deagle Arena",
+      "file": "games/deagle-arena.lua",
+      "places": [84556640895285],
+      "detect": "return game.PlaceId == 84556640895285 or game:GetService('Workspace'):FindFirstChild('Deagle') ~= nil or game:GetService('Workspace'):FindFirstChild('Arena') ~= nil",
+      "status": "active",
+      "version": "1.0.0",
+      "description": "Deagle Arena Script"
+    }
+  ]
+}
