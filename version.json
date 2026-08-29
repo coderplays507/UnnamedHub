@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "forceUpdate": false,
+  "announcement": "UnnamedScripts Hub is live!",
+  "updatedFiles": {
+    "index.json": "1.0.0",
+    "games/deagle-arena.lua": "1.0.0"
+  }
+}
