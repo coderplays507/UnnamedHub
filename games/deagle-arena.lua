@@ -19,7 +19,7 @@ local function notify(text, duration)
     end)
 end
 
-notify("✅ Script Loaded!", 3)
+notify("Script Loaded!", 3)
 
 -- Create Main GUI
 local ScreenGui = Instance.new("ScreenGui")
