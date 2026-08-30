@@ -1,4 +1,4 @@
--- Deagle Arena Script - Complete
+-- Deagle Arena Script - Fixed Toggles
 -- UnnamedScripts Hub
 
 local Players = game:GetService("Players")
@@ -19,7 +19,7 @@ local function notify(text, duration)
     end)
 end
 
-notify("Script Loaded!", 3)
+notify("✅ Script Loaded!", 3)
 
 -- Create Main GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -70,7 +70,7 @@ CloseBtn.Size = UDim2.new(0, 30, 0, 25)
 CloseBtn.Position = UDim2.new(0.85, 0, 0, 2)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Text = " ✕ "
+CloseBtn.Text = "✕"
 CloseBtn.Font = Enum.Font.SourceSansBold
 CloseBtn.TextSize = 14
 CloseBtn.Parent = TitleBar
@@ -81,12 +81,15 @@ Content.Position = UDim2.new(0, 0, 0, 30)
 Content.BackgroundTransparency = 1
 Content.Parent = Frame
 
--- Variables
-local aimbotEnabled = false
-local espEnabled = false
-local noRecoilEnabled = false
-local speedHackEnabled = false
-local flyEnabled = false
+-- Feature Variables (Global for easy access)
+local features = {
+    aimbot = false,
+    esp = false,
+    noRecoil = false,
+    speedHack = false,
+    fly = false,
+}
+
 local flySpeed = 50
 local flyKeys = {forward = false, backward = false, left = false, right = false, up = false, down = false}
 local isMinimized = false
@@ -133,7 +136,7 @@ local function getClosestEnemyInFOV()
     local screenCenter = Cam.ViewportSize / 2
 
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.TeamColor ~= LocalPlayer.TeamColor then
+        if player ~= LocalPlayer then
             local char = player.Character
             if char then
                 local torso = getTorso(char)
@@ -153,10 +156,10 @@ local function getClosestEnemyInFOV()
     return closestPlayer
 end
 
--- Aimbot Loop
+-- Aimbot Loop (Always running, checks feature state)
 RunService:BindToRenderStep("FOVUpdate", Enum.RenderPriority.Camera.Value + 1, function()
     updateDrawings()
-    if aimbotEnabled then
+    if features.aimbot then
         local target = getClosestEnemyInFOV()
         if target and target.Character then
             local torso = getTorso(target.Character)
@@ -167,235 +170,182 @@ RunService:BindToRenderStep("FOVUpdate", Enum.RenderPriority.Camera.Value + 1, f
     end
 end)
 
--- ESP System
-local espActive = false
-local function toggleESP()
-    if espEnabled then
-        if not espActive then
-            espActive = true
-            spawn(function()
-                while espEnabled and espActive do
-                    pcall(function()
-                        for _, player in ipairs(Players:GetPlayers()) do
-                            if player ~= LocalPlayer and player.Character then
-                                local highlight = player.Character:FindFirstChild("ESP_Highlight")
-                                if not highlight then
-                                    highlight = Instance.new("Highlight")
-                                    highlight.Name = "ESP_Highlight"
-                                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                    highlight.FillTransparency = 0.5
-                                    highlight.Parent = player.Character
-                                end
-                                
-                                -- Distance text
-                                local head = player.Character:FindFirstChild("Head")
-                                if head and not head:FindFirstChild("ESP_Text") then
-                                    local billboard = Instance.new("BillboardGui")
-                                    billboard.Name = "ESP_Text"
-                                    billboard.Size = UDim2.new(0, 200, 0, 30)
-                                    billboard.StudsOffset = Vector3.new(0, 2, 0)
-                                    billboard.AlwaysOnTop = true
-                                    billboard.Parent = head
-                                    
-                                    local label = Instance.new("TextLabel")
-                                    label.Size = UDim2.new(1, 0, 1, 0)
-                                    label.BackgroundTransparency = 1
-                                    label.TextColor3 = Color3.fromRGB(255, 0, 0)
-                                    label.Text = player.Name
-                                    label.Font = Enum.Font.SourceSansBold
-                                    label.TextSize = 14
-                                    label.Parent = billboard
-                                end
-                            end
+-- ESP System (Runs in loop, checks feature state)
+spawn(function()
+    while true do
+        if features.esp then
+            pcall(function()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        local highlight = player.Character:FindFirstChild("ESP_Highlight")
+                        if not highlight then
+                            highlight = Instance.new("Highlight")
+                            highlight.Name = "ESP_Highlight"
+                            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            highlight.FillTransparency = 0.5
+                            highlight.Parent = player.Character
                         end
-                    end)
-                    wait(1)
+                    end
                 end
             end)
-        end
-    else
-        espActive = false
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player.Character then
-                local highlight = player.Character:FindFirstChild("ESP_Highlight")
-                if highlight then highlight:Destroy() end
-                local head = player.Character:FindFirstChild("Head")
-                if head then
-                    local text = head:FindFirstChild("ESP_Text")
-                    if text then text:Destroy() end
+        else
+            -- Remove all ESP
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.Character then
+                    local highlight = player.Character:FindFirstChild("ESP_Highlight")
+                    if highlight then highlight:Destroy() end
                 end
             end
         end
+        wait(1)
     end
-end
+end)
 
--- No Recoil
-local noRecoilActive = false
-local function toggleNoRecoil()
-    if noRecoilEnabled then
-        if not noRecoilActive then
-            noRecoilActive = true
-            spawn(function()
-                while noRecoilEnabled and noRecoilActive do
-                    pcall(function()
-                        if LocalPlayer.Character then
-                            local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                            if tool then
-                                for _, child in ipairs(tool:GetDescendants()) do
-                                    if child.Name == "Recoil" or child.Name == "recoil" then
-                                        if child:IsA("NumberValue") then
-                                            child.Value = 0
-                                        elseif child:IsA("Vector3Value") then
-                                            child.Value = Vector3.new(0, 0, 0)
-                                        end
-                                    end
+-- No Recoil (Runs in loop, checks feature state)
+spawn(function()
+    while true do
+        if features.noRecoil then
+            pcall(function()
+                if LocalPlayer.Character then
+                    local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                    if tool then
+                        for _, child in ipairs(tool:GetDescendants()) do
+                            if child.Name == "Recoil" or child.Name == "recoil" then
+                                if child:IsA("NumberValue") then
+                                    child.Value = 0
+                                elseif child:IsA("Vector3Value") then
+                                    child.Value = Vector3.new(0, 0, 0)
                                 end
                             end
                         end
-                    end)
-                    wait(0.05)
+                    end
                 end
             end)
         end
-    else
-        noRecoilActive = false
+        wait(0.1)
     end
-end
+end)
 
--- Speed Hack
-local speedActive = false
-local function toggleSpeedHack()
-    if speedHackEnabled then
-        if not speedActive then
-            speedActive = true
-            spawn(function()
-                while speedHackEnabled and speedActive do
-                    pcall(function()
-                        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                        if humanoid then
-                            humanoid.WalkSpeed = 50
-                        end
-                    end)
-                    wait(0.1)
-                end
-            end)
-        end
-    else
-        speedActive = false
-        pcall(function()
-            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = 16
-            end
-        end)
-    end
-end
-
--- Fly
-local flyActive = false
-local function toggleFly()
-    if flyEnabled then
-        if not flyActive then
-            flyActive = true
-            spawn(function()
+-- Speed Hack (Runs in loop, checks feature state)
+spawn(function()
+    while true do
+        if features.speedHack then
+            pcall(function()
                 local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.WalkSpeed = 50
+                end
+            end)
+        else
+            pcall(function()
+                local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.WalkSpeed = 16
+                end
+            end)
+        end
+        wait(0.5)
+    end
+end)
+
+-- Fly (Runs in loop, checks feature state)
+spawn(function()
+    while true do
+        if features.fly then
+            pcall(function()
+                local character = LocalPlayer.Character
+                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+                
                 if humanoid then
                     humanoid.PlatformStand = true
                 end
                 
-                while flyEnabled and flyActive do
-                    pcall(function()
-                        local character = LocalPlayer.Character
-                        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-                        
-                        if rootPart and humanoid then
-                            local direction = Vector3.new(0, 0, 0)
-                            
-                            if flyKeys.forward then direction = direction + workspace.CurrentCamera.CFrame.LookVector end
-                            if flyKeys.backward then direction = direction - workspace.CurrentCamera.CFrame.LookVector end
-                            if flyKeys.left then direction = direction - workspace.CurrentCamera.CFrame.RightVector end
-                            if flyKeys.right then direction = direction + workspace.CurrentCamera.CFrame.RightVector end
-                            if flyKeys.up then direction = direction + Vector3.new(0, 1, 0) end
-                            if flyKeys.down then direction = direction - Vector3.new(0, 1, 0) end
-                            
-                            if direction.Magnitude > 0 then
-                                rootPart.Velocity = direction.Unit * flySpeed
-                            else
-                                rootPart.Velocity = Vector3.new(0, 0, 0)
-                            end
-                        end
-                    end)
-                    wait()
-                end
-                
-                pcall(function()
-                    if humanoid then
-                        humanoid.PlatformStand = false
+                if rootPart and humanoid then
+                    local direction = Vector3.new(0, 0, 0)
+                    
+                    if flyKeys.forward then direction = direction + workspace.CurrentCamera.CFrame.LookVector end
+                    if flyKeys.backward then direction = direction - workspace.CurrentCamera.CFrame.LookVector end
+                    if flyKeys.left then direction = direction - workspace.CurrentCamera.CFrame.RightVector end
+                    if flyKeys.right then direction = direction + workspace.CurrentCamera.CFrame.RightVector end
+                    if flyKeys.up then direction = direction + Vector3.new(0, 1, 0) end
+                    if flyKeys.down then direction = direction - Vector3.new(0, 1, 0) end
+                    
+                    if direction.Magnitude > 0 then
+                        rootPart.Velocity = direction.Unit * flySpeed
+                    else
+                        rootPart.Velocity = Vector3.new(0, 0, 0)
                     end
-                end)
+                end
+            end)
+        else
+            pcall(function()
+                local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.PlatformStand = false
+                end
             end)
         end
-    else
-        flyActive = false
+        wait()
     end
-end
+end)
 
--- Create Buttons
-local function createButton(name, yPos, callback)
+-- CREATE BUTTONS (Fixed toggle system)
+local function createToggle(name, yPos, featureName)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -20, 0, 35)
     btn.Position = UDim2.new(0, 10, 0, yPos)
     btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Text = name
+    btn.Text = name .. ": OFF"
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 13
     btn.Parent = Content
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
-
-local function createToggle(name, yPos, toggleFunc)
-    local btn = createButton(name .. ": OFF", yPos, function()
-        local enabled = not btn.Text:find("ON")
-        btn.Text = name .. ": " .. (enabled and "ON" or "OFF")
-        btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(50, 50, 50)
-        toggleFunc(enabled)
-        notify(name .. " " .. (enabled and "Enabled" or "Disabled"), 2)
-        return enabled
+    
+    btn.MouseButton1Click:Connect(function()
+        features[featureName] = not features[featureName]
+        
+        if features[featureName] then
+            btn.Text = name .. ": ON"
+            btn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+            notify(name .. " Enabled!", 2)
+        else
+            btn.Text = name .. ": OFF"
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            notify(name .. " Disabled!", 2)
+        end
+        
+        -- Special handling for FOV circle
+        if featureName == "aimbot" then
+            FOVring.Visible = features.aimbot
+        end
+        
+        print("[UnnamedHub] " .. name .. " is now " .. (features[featureName] and "ON" or "OFF"))
     end)
+    
     return btn
 end
 
--- Create all toggles
-createToggle("FOV Aimbot", 5, function(enabled)
-    aimbotEnabled = enabled
-    FOVring.Visible = enabled
-end)
-
-createToggle("ESP", 42, function(enabled) 
-    espEnabled = enabled
-    toggleESP() 
-end)
-
-createToggle("No Recoil", 79, function(enabled) 
-    noRecoilEnabled = enabled
-    toggleNoRecoil() 
-end)
-
-createToggle("Speed Hack", 116, function(enabled) 
-    speedHackEnabled = enabled
-    toggleSpeedHack() 
-end)
-
-createToggle("Fly", 153, function(enabled) 
-    flyEnabled = enabled
-    toggleFly() 
-end)
+-- Create all toggle buttons
+createToggle("FOV Aimbot", 5, "aimbot")
+createToggle("ESP", 42, "esp")
+createToggle("No Recoil", 79, "noRecoil")
+createToggle("Speed Hack", 116, "speedHack")
+createToggle("Fly", 153, "fly")
 
 -- Kill Button
-createButton("💀 KILL", 190, function()
+local KillBtn = Instance.new("TextButton")
+KillBtn.Size = UDim2.new(1, -20, 0, 35)
+KillBtn.Position = UDim2.new(0, 10, 0, 190)
+KillBtn.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
+KillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+KillBtn.Text = "💀 KILL"
+KillBtn.Font = Enum.Font.SourceSansBold
+KillBtn.TextSize = 13
+KillBtn.Parent = Content
+
+KillBtn.MouseButton1Click:Connect(function()
     pcall(function()
         local character = LocalPlayer.Character
         if character then
@@ -422,17 +372,15 @@ end)
 
 -- Close
 CloseBtn.MouseButton1Click:Connect(function()
-    aimbotEnabled = false
-    espEnabled = false
-    noRecoilEnabled = false
-    speedHackEnabled = false
-    flyEnabled = false
-    espActive = false
-    noRecoilActive = false
-    speedActive = false
-    flyActive = false
+    -- Turn off all features
+    features.aimbot = false
+    features.esp = false
+    features.noRecoil = false
+    features.speedHack = false
+    features.fly = false
     FOVring.Visible = false
     
+    -- Reset speed
     pcall(function()
         local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if humanoid then
@@ -441,25 +389,12 @@ CloseBtn.MouseButton1Click:Connect(function()
         end
     end)
     
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
-            local highlight = player.Character:FindFirstChild("ESP_Highlight")
-            if highlight then highlight:Destroy() end
-            local head = player.Character:FindFirstChild("Head")
-            if head then
-                local text = head:FindFirstChild("ESP_Text")
-                if text then text:Destroy() end
-            end
-        end
-    end
-    
     ScreenGui:Destroy()
     notify("Script closed!", 3)
 end)
 
 -- Fly Controls
 UserInputService.InputBegan:Connect(function(input)
-    if not flyEnabled then return end
     if input.KeyCode == Enum.KeyCode.W then flyKeys.forward = true end
     if input.KeyCode == Enum.KeyCode.S then flyKeys.backward = true end
     if input.KeyCode == Enum.KeyCode.A then flyKeys.left = true end
@@ -478,3 +413,4 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 print("[UnnamedHub] Script loaded successfully!")
+print("[UnnamedHub] Features ready: aimbot, esp, noRecoil, speedHack, fly")
